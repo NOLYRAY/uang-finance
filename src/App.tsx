@@ -59,9 +59,9 @@ export default function App() {
   };
 
   const handleReset = () => {
-    if (window.confirm('Reset data ke kondisi awal simulasi?')) {
+    if (window.confirm('Reset semua nominal dan data transaksi ke nol?')) {
       resetToSample();
-      showToast('Data simulasi berhasil dimuat ulang.');
+      showToast('Semua nominal telah disetel ke nol (Rp 0).');
     }
   };
 
@@ -298,29 +298,35 @@ export default function App() {
                   </div>
 
                   <div className="space-y-3">
-                    {goals.slice(0, 3).map((goal) => {
-                      const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
-                      return (
-                        <div key={goal.id} className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-white truncate max-w-[200px]">{goal.title}</span>
-                            <span className="font-mono text-[11px] font-bold text-emerald-400">
-                              {progress.toFixed(0)}%
-                            </span>
+                    {goals.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-slate-500 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+                        Belum ada target tabungan aktif (Rp 0).
+                      </div>
+                    ) : (
+                      goals.slice(0, 3).map((goal) => {
+                        const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+                        return (
+                          <div key={goal.id} className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-white truncate max-w-[200px]">{goal.title}</span>
+                              <span className="font-mono text-[11px] font-bold text-emerald-400">
+                                {progress.toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                                style={{ width: `${Math.min(100, progress)}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                              <span>{formatIDR(goal.currentAmount)}</span>
+                              <span className="text-slate-500">/ {formatIDR(goal.targetAmount)}</span>
+                            </div>
                           </div>
-                          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-emerald-400 transition-all duration-300"
-                              style={{ width: `${Math.min(100, progress)}%` }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                            <span>{formatIDR(goal.currentAmount)}</span>
-                            <span className="text-slate-500">/ {formatIDR(goal.targetAmount)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -447,7 +453,12 @@ export default function App() {
               </div>
 
               <div className="divide-y divide-slate-800/60">
-                {recentTransactions.map((tx) => {
+                {recentTransactions.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">
+                    Belum ada transaksi tercatat (Rp 0). Gunakan form pencatatan di atas untuk mulai mencatat.
+                  </div>
+                ) : (
+                  recentTransactions.map((tx) => {
                   const cat = CATEGORIES[tx.category] || { label: tx.category, color: '#94a3b8' };
                   const isExpense = tx.type === 'expense';
                   const isIncome = tx.type === 'income';
@@ -490,7 +501,7 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })}
+                }))}
               </div>
             </div>
           </div>

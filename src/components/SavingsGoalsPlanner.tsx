@@ -19,18 +19,18 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newTargetAmount, setNewTargetAmount] = useState('20000000');
+  const [newTargetAmount, setNewTargetAmount] = useState('0');
   const [newCurrentAmount, setNewCurrentAmount] = useState('0');
-  const [newMonthlyTarget, setNewMonthlyTarget] = useState('1000000');
+  const [newMonthlyTarget, setNewMonthlyTarget] = useState('0');
   const [newDeadline, setNewDeadline] = useState('2027-12-31');
   const [newCategory, setNewCategory] = useState<SavingsGoal['category']>('other');
   const [newNotes, setNewNotes] = useState('');
 
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
-  const [contributeAmount, setContributeAmount] = useState('500000');
+  const [contributeAmount, setContributeAmount] = useState('0');
 
-  const [simInitial, setSimInitial] = useState('10000000');
-  const [simMonthly, setSimMonthly] = useState('1500000');
+  const [simInitial, setSimInitial] = useState('0');
+  const [simMonthly, setSimMonthly] = useState('0');
   const [simYears, setSimYears] = useState('3');
   const [simRate, setSimRate] = useState('6');
 
@@ -99,7 +99,25 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
       </div>
 
       {/* Goals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {goals.length === 0 ? (
+        <div className="bg-slate-900/60 p-8 sm:p-12 rounded-2xl border border-dashed border-slate-800 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-950/80 border border-blue-800/40 text-blue-400 flex items-center justify-center mx-auto">
+            <PiggyBank className="w-6 h-6" />
+          </div>
+          <div className="text-sm font-bold text-white">Belum Ada Target Tabungan</div>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Semua nominal bersih di angka 0. Buat target tabungan pertama Anda (Dana Darurat, PC/Gadget, atau Impian lainnya) untuk mulai melacak.
+          </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-md transition-all mt-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Target Tabungan</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {goals.map((goal) => {
           const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
           const deficit = Math.max(0, goal.targetAmount - goal.currentAmount);
@@ -204,6 +222,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
           );
         })}
       </div>
+      )}
 
       {/* Simulator Bunga Majemuk / Compound Interest Projection */}
       <div className="bg-slate-900/90 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-sm">

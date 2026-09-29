@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BudgetConfig, Transaction, CategoryBudgetMap } from '../types/finance';
 import { calculate503020 } from '../utils/calculations';
 import { formatIDR, parseNumberInput } from '../utils/formatters';
@@ -16,10 +16,17 @@ export const Budget503020Calc: React.FC<Budget503020CalcProps> = ({
   setBudgetConfig,
   transactions,
 }) => {
-  const [incomeInput, setIncomeInput] = useState<string>(budgetConfig.monthlyIncome.toString());
+  const [incomeInput, setIncomeInput] = useState<string>(
+    budgetConfig.monthlyIncome ? budgetConfig.monthlyIncome.toString() : '0'
+  );
   const [selectedPreset, setSelectedPreset] = useState<'standard' | 'family' | 'fire' | 'custom'>('standard');
 
   const [budgetInputs, setBudgetInputs] = useState<CategoryBudgetMap>(budgetConfig.categoryBudgets);
+
+  useEffect(() => {
+    setIncomeInput(budgetConfig.monthlyIncome ? budgetConfig.monthlyIncome.toString() : '0');
+    setBudgetInputs(budgetConfig.categoryBudgets);
+  }, [budgetConfig.monthlyIncome, budgetConfig.categoryBudgets]);
 
   const result = calculate503020(budgetConfig.monthlyIncome, budgetConfig, transactions);
 

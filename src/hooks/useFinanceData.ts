@@ -3,14 +3,14 @@ import { Transaction, SavingsGoal, BudgetConfig, EmergencyFundConfig, CategoryBu
 import { INITIAL_TRANSACTIONS, INITIAL_SAVINGS_GOALS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories';
 
 const STORAGE_KEYS = {
-  TRANSACTIONS: 'bukuartha_transactions_v2',
-  GOALS: 'bukuartha_goals_v2',
-  BUDGET: 'bukuartha_budget_v2',
-  EMERGENCY: 'bukuartha_emergency_v2',
+  TRANSACTIONS: 'uang_app_transactions_v1',
+  GOALS: 'uang_app_goals_v1',
+  BUDGET: 'uang_app_budget_v1',
+  EMERGENCY: 'uang_app_emergency_v1',
 };
 
 const DEFAULT_BUDGET: BudgetConfig = {
-  monthlyIncome: 9000000,
+  monthlyIncome: 0,
   needsRatio: 50,
   wantsRatio: 30,
   savingsRatio: 20,
@@ -18,10 +18,10 @@ const DEFAULT_BUDGET: BudgetConfig = {
 };
 
 const DEFAULT_EMERGENCY: EmergencyFundConfig = {
-  monthlyExpense: 3500000,
+  monthlyExpense: 0,
   status: 'single',
   customMonths: 6,
-  currentSavings: 11200000,
+  currentSavings: 0,
 };
 
 export function useFinanceData() {
