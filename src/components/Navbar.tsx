@@ -22,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'savings', label: 'Target Tabungan' },
     { id: 'budget503020', label: 'Batas Anggaran' },
     { id: 'transactions', label: 'Buku Kas' },
+    { id: 'installapp', label: '📱 Pasang di HP' },
     { id: 'architecture', label: 'Struktur Web' },
   ];
 

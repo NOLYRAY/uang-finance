@@ -9,6 +9,8 @@ import { SavingsGoalsPlanner } from './components/SavingsGoalsPlanner';
 import { TransactionList } from './components/TransactionList';
 import { TransactionFormModal } from './components/TransactionFormModal';
 import { ArchitectureGuide } from './components/ArchitectureGuide';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { InstallAppGuide } from './components/InstallAppGuide';
 import { CATEGORIES } from './constants/categories';
 import {
   ArrowRight,
@@ -111,6 +113,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+      {/* PWA Install Banner (Auto-detects Mobile & Browser) */}
+      <PWAInstallBanner />
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -550,6 +555,9 @@ export default function App() {
             defaultCategoryFilter={selectedCategoryFilter}
           />
         )}
+
+        {/* TAB: PASANG APLIKASI DI HP PWA */}
+        {activeTab === 'installapp' && <InstallAppGuide />}
 
         {/* TAB 6: STRUKTUR WEB ARSITEKTUR */}
         {activeTab === 'architecture' && <ArchitectureGuide />}
