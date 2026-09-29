@@ -1,10 +1,11 @@
 import React from 'react';
-import { PlusCircle, RotateCcw, Download } from 'lucide-react';
+import { PlusCircle, RotateCcw, Download, Zap } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenAddModal: () => void;
+  onOpenDetectorModal?: () => void;
   onExportCSV: () => void;
   onResetSample: () => void;
 }
@@ -13,6 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenAddModal,
+  onOpenDetectorModal,
   onExportCSV,
   onResetSample,
 }) => {
@@ -83,6 +85,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Download className="w-4 h-4" />
             </button>
+            {onOpenDetectorModal && (
+              <button
+                onClick={onOpenDetectorModal}
+                title="Deteksi Notifikasi Transaksi Digital (DANA/BCA)"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold text-emerald-300 bg-emerald-950/70 hover:bg-emerald-900/70 border border-emerald-500/30 rounded-xl transition-all shadow-xs active:scale-95 whitespace-nowrap cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden xs:inline">Deteksi Digital</span>
+              </button>
+            )}
             <button
               onClick={onOpenAddModal}
               className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 whitespace-nowrap"

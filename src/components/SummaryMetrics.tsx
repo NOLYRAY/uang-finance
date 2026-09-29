@@ -15,12 +15,14 @@ interface SummaryMetricsProps {
     goalsCount: number;
   };
   onQuickAdd: () => void;
+  onOpenDetector?: () => void;
   onNavigateTab: (tab: string) => void;
 }
 
 export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   summary,
   onQuickAdd,
+  onOpenDetector,
   onNavigateTab,
 }) => {
   const isSurplus = summary.netCashFlow >= 0;
@@ -72,12 +74,24 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={onQuickAdd}
-              className="px-3 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
-            >
-              + Catat
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onOpenDetector && (
+                <button
+                  onClick={onOpenDetector}
+                  title="Deteksi Notifikasi Otomatis (DANA, GoPay, BCA)"
+                  className="px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="text-amber-400">⚡</span>
+                  <span className="hidden xs:inline">Deteksi Digital</span>
+                </button>
+              )}
+              <button
+                onClick={onQuickAdd}
+                className="px-3 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                + Catat
+              </button>
+            </div>
           </div>
         </div>
 

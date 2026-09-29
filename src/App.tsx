@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFinanceData } from './hooks/useFinanceData';
 import { Navbar } from './components/Navbar';
 import { SummaryMetrics } from './components/SummaryMetrics';
@@ -11,6 +11,8 @@ import { TransactionFormModal } from './components/TransactionFormModal';
 import { ArchitectureGuide } from './components/ArchitectureGuide';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { InstallAppGuide } from './components/InstallAppGuide';
+import { DigitalTransactionDetectorModal } from './components/DigitalTransactionDetectorModal';
+import { detectDigitalTransaction, sendNativePushNotification } from './utils/transactionDetector';
 import { CATEGORIES } from './constants/categories';
 import {
   ArrowRight,
@@ -53,12 +55,47 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isDetectorModalOpen, setIsDetectorModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
+
+  // Auto-detect digital transactions from URL query parameter (e.g. from mobile notification automation / shortcut)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const autoText = urlParams.get('auto') || urlParams.get('text');
+      if (autoText) {
+        const detected = detectDigitalTransaction(decodeURIComponent(autoText));
+        if (detected) {
+          addTransaction({
+            type: detected.type,
+            amount: detected.amount,
+            category: detected.category,
+            description: detected.description,
+            date: new Date().toISOString().split('T')[0],
+            paymentMethod: detected.paymentMethod,
+          });
+
+          const isInc = detected.type === 'income';
+          const notifTitle = isInc
+            ? `💰 Pemasukan Baru: +${formatIDR(detected.amount)}`
+            : `💸 Pengeluaran Baru: -${formatIDR(detected.amount)}`;
+          const notifBody = `${detected.description} (${CATEGORIES[detected.category]?.label || detected.category})`;
+          sendNativePushNotification(notifTitle, notifBody);
+          showToast(`Otomatis dicatat: ${isInc ? '+' : '-'}${formatIDR(detected.amount)} (${detected.source})`);
+
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    } catch (e) {
+      console.warn('URL auto-detect error', e);
+    }
+  }, [addTransaction]);
 
   const handleReset = () => {
     if (window.confirm('Reset semua nominal dan data transaksi ke nol?')) {
@@ -121,6 +158,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenDetectorModal={() => setIsDetectorModalOpen(true)}
         onExportCSV={exportCSV}
         onResetSample={handleReset}
       />
@@ -134,6 +172,7 @@ export default function App() {
             <SummaryMetrics
               summary={summary}
               onQuickAdd={() => setIsAddModalOpen(true)}
+              onOpenDetector={() => setIsDetectorModalOpen(true)}
               onNavigateTab={(tab) => setActiveTab(tab)}
             />
 
@@ -569,6 +608,14 @@ export default function App() {
         onClose={() => setIsAddModalOpen(false)}
         onAddTransaction={addTransaction}
         goals={goals}
+      />
+
+      {/* Digital Transaction Detector & Notification Modal */}
+      <DigitalTransactionDetectorModal
+        isOpen={isDetectorModalOpen}
+        onClose={() => setIsDetectorModalOpen(false)}
+        onAddTransaction={addTransaction}
+        onShowToast={showToast}
       />
 
       {/* Floating Toast Notification */}
