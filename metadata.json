@@ -1,0 +1,6 @@
+{
+  "name": "BukuArtha - Penghitung Pengeluaran & Tabungan",
+  "description": "Aplikasi komprehensif dan panduan struktur web untuk menghitung pengeluaran, mengelola anggaran 50/30/20, dan merencanakan tabungan masa depan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
