@@ -53,7 +53,8 @@ export interface SavingsGoal {
   title: string;
   targetAmount: number;
   currentAmount: number;
-  monthlyTarget: number;
+  dailyTarget: number; // Setoran harian (Rp/hari)
+  monthlyTarget?: number; // Setoran bulanan (estimasi atau fallback)
   deadlineDate: string; // YYYY-MM-DD
   category: 'emergency' | 'house' | 'vehicle' | 'gadget' | 'travel' | 'game' | 'other';
   notes?: string;

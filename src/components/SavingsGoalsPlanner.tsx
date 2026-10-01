@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SavingsGoal } from '../types/finance';
 import { formatIDR, formatDateIndo, parseNumberInput } from '../utils/formatters';
-import { calculateSavingsProjection, estimateMonthsToGoal } from '../utils/calculations';
+import { calculateSavingsProjection, estimateMonthsToGoal, estimateDaysToGoal } from '../utils/calculations';
 import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles } from 'lucide-react';
 
 interface SavingsGoalsPlannerProps {
@@ -21,7 +21,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [newTargetAmount, setNewTargetAmount] = useState('0');
   const [newCurrentAmount, setNewCurrentAmount] = useState('0');
-  const [newMonthlyTarget, setNewMonthlyTarget] = useState('0');
+  const [newDailyTarget, setNewDailyTarget] = useState('0');
   const [newDeadline, setNewDeadline] = useState('2027-12-31');
   const [newCategory, setNewCategory] = useState<SavingsGoal['category']>('other');
   const [newNotes, setNewNotes] = useState('');
@@ -45,11 +45,13 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
     e.preventDefault();
     if (!newTitle.trim()) return;
 
+    const dailyVal = parseNumberInput(newDailyTarget);
     onAddGoal({
       title: newTitle.trim(),
       targetAmount: parseNumberInput(newTargetAmount),
       currentAmount: parseNumberInput(newCurrentAmount),
-      monthlyTarget: parseNumberInput(newMonthlyTarget),
+      dailyTarget: dailyVal,
+      monthlyTarget: dailyVal * 30,
       deadlineDate: newDeadline,
       category: newCategory,
       notes: newNotes.trim() || undefined,
@@ -121,7 +123,8 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
         {goals.map((goal) => {
           const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
           const deficit = Math.max(0, goal.targetAmount - goal.currentAmount);
-          const timeEst = estimateMonthsToGoal(goal.targetAmount, goal.currentAmount, goal.monthlyTarget);
+          const dailyTarget = goal.dailyTarget || Math.round((goal.monthlyTarget || 0) / 30);
+          const timeEst = estimateDaysToGoal(goal.targetAmount, goal.currentAmount, dailyTarget);
 
           return (
             <div
@@ -183,20 +186,20 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                   </div>
                 </div>
 
-                {/* Estimated Months to Goal */}
+                {/* Estimated Days to Goal */}
                 <div className="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-300 space-y-1">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400">Setoran Rutin:</span>
                     <span className="font-mono font-medium text-white">
-                      {formatIDR(goal.monthlyTarget)} / bulan
+                      {formatIDR(dailyTarget)} <span className="text-[11px] text-slate-400">/ hari</span>
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400">Estimasi Selesai:</span>
                     <span className="font-mono font-bold text-emerald-400">
-                      {timeEst.months === 0
+                      {timeEst.days === 0
                         ? 'Sudah Tercapai'
-                        : `${timeEst.months} bulan lagi`}
+                        : `${timeEst.days} hari lagi (${(timeEst.days / 30).toFixed(1)} bln)`}
                     </span>
                   </div>
                 </div>
@@ -210,9 +213,9 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                 <button
                   onClick={() => {
                     setContributeGoalId(goal.id);
-                    setContributeAmount(goal.monthlyTarget.toString());
+                    setContributeAmount(dailyTarget > 0 ? dailyTarget.toString() : '50000');
                   }}
-                  className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
+                  className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Coins className="w-3.5 h-3.5" />
                   <span>Setor Tabungan</span>
@@ -417,14 +420,23 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Setoran Rutin Bulanan</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-300">Setoran Rutin Harian</label>
+                    <span className="text-[10px] text-emerald-400 font-mono font-bold">/ hari</span>
+                  </div>
                   <input
                     type="text"
                     required
-                    value={newMonthlyTarget}
-                    onChange={(e) => setNewMonthlyTarget(e.target.value)}
-                    className="w-full text-xs font-mono bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                    placeholder="Misal: 10.000"
+                    value={newDailyTarget}
+                    onChange={(e) => setNewDailyTarget(e.target.value)}
+                    className="w-full text-xs font-mono bg-slate-950 border border-emerald-500/50 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
                   />
+                  {parseNumberInput(newDailyTarget) > 0 && (
+                    <span className="text-[10px] text-slate-400 block mt-1">
+                      ≈ {formatIDR(parseNumberInput(newDailyTarget) * 30)} / bulan
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Batas Waktu (Deadline)</label>

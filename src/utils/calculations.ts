@@ -149,6 +149,23 @@ export function calculateSavingsProjection(
 }
 
 /**
+ * Estimates days and months needed to reach a savings target based on daily deposit.
+ */
+export function estimateDaysToGoal(
+  targetAmount: number,
+  currentAmount: number,
+  dailyDeposit: number
+): { days: number; months: number; isAchievable: boolean } {
+  const deficit = targetAmount - currentAmount;
+  if (deficit <= 0) return { days: 0, months: 0, isAchievable: true };
+  if (dailyDeposit <= 0) return { days: Infinity, months: Infinity, isAchievable: false };
+
+  const days = Math.ceil(deficit / dailyDeposit);
+  const months = Math.ceil(days / 30);
+  return { days, months, isAchievable: true };
+}
+
+/**
  * Estimates months needed to reach a savings target
  */
 export function estimateMonthsToGoal(
