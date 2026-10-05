@@ -46,6 +46,7 @@ export default function App() {
     addGoal,
     deleteGoal,
     contributeToGoal,
+    withdrawFromGoal,
     resetToSample,
     exportData,
     exportCSV,
@@ -571,6 +572,7 @@ export default function App() {
             onAddGoal={addGoal}
             onDeleteGoal={deleteGoal}
             onContribute={contributeToGoal}
+            onWithdraw={withdrawFromGoal}
           />
         )}
 

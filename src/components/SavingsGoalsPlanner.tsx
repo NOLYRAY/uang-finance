@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { SavingsGoal } from '../types/finance';
+import { SavingsGoal, CategoryId } from '../types/finance';
 import { formatIDR, formatDateIndo, parseNumberInput } from '../utils/formatters';
 import { calculateSavingsProjection, estimateMonthsToGoal, estimateDaysToGoal } from '../utils/calculations';
-import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles } from 'lucide-react';
+import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles, ArrowDownRight, X } from 'lucide-react';
 
 interface SavingsGoalsPlannerProps {
   goals: SavingsGoal[];
   onAddGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt'>) => void;
   onDeleteGoal: (id: string) => void;
   onContribute: (goalId: string, amount: number, note?: string) => void;
+  onWithdraw?: (goalId: string, amount: number, note?: string, category?: CategoryId) => void;
 }
 
 export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
@@ -16,6 +17,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
   onAddGoal,
   onDeleteGoal,
   onContribute,
+  onWithdraw,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -28,6 +30,11 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
   const [contributeAmount, setContributeAmount] = useState('0');
+
+  const [withdrawGoalId, setWithdrawGoalId] = useState<string | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState('0');
+  const [withdrawNote, setWithdrawNote] = useState('');
+  const [withdrawCategory, setWithdrawCategory] = useState<CategoryId>('keperluan');
 
   const [simInitial, setSimInitial] = useState('0');
   const [simMonthly, setSimMonthly] = useState('0');
@@ -70,6 +77,18 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 
     onContribute(contributeGoalId, amount, `Setoran tabungan via planner`);
     setContributeGoalId(null);
+  };
+
+  const handleQuickWithdraw = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawGoalId) return;
+    const amount = parseNumberInput(withdrawAmount);
+    if (amount <= 0) return;
+
+    if (onWithdraw) {
+      onWithdraw(withdrawGoalId, amount, withdrawNote.trim() || undefined, withdrawCategory);
+    }
+    setWithdrawGoalId(null);
   };
 
   return (
@@ -205,21 +224,38 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between">
+              {/* Action Buttons */}
+              <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
                 <span className="text-[11px] text-slate-400 font-medium">
                   {progress >= 100 ? 'Lengkap' : 'Aktif'}
                 </span>
-                <button
-                  onClick={() => {
-                    setContributeGoalId(goal.id);
-                    setContributeAmount(dailyTarget > 0 ? dailyTarget.toString() : '50000');
-                  }}
-                  className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Setor Tabungan</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setWithdrawGoalId(goal.id);
+                      setWithdrawAmount(goal.currentAmount >= 50000 ? '50000' : (goal.currentAmount || 10000).toString());
+                      setWithdrawNote(`Pengeluaran dari ${goal.title}`);
+                      setWithdrawCategory('keperluan');
+                    }}
+                    disabled={goal.currentAmount <= 0}
+                    className="px-2.5 py-1.5 text-xs font-bold text-rose-300 bg-rose-950/70 hover:bg-rose-900/80 border border-rose-800/60 rounded-xl transition-colors flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Tarik atau gunakan uang tabungan ini untuk pengeluaran"
+                  >
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                    <span>Tarik / Pakai</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setContributeGoalId(goal.id);
+                      setContributeAmount(dailyTarget > 0 ? dailyTarget.toString() : '50000');
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Coins className="w-3.5 h-3.5" />
+                    <span>Setor</span>
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -367,6 +403,104 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                   className="px-4 py-1.5 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-xs"
                 >
                   Konfirmasi Setor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Quick Withdraw / Spend from Goal */}
+      {withdrawGoalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="bg-slate-900 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-slate-800 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span className="text-rose-400">💸</span>
+                  <span>Tarik / Pakai Uang Tabungan</span>
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Target: <strong className="text-white">{goals.find((g) => g.id === withdrawGoalId)?.title}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setWithdrawGoalId(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex justify-between items-center text-xs">
+              <span className="text-slate-400">Saldo Tabungan Saat Ini:</span>
+              <span className="font-mono font-bold text-emerald-400">
+                {formatIDR(goals.find((g) => g.id === withdrawGoalId)?.currentAmount || 0)}
+              </span>
+            </div>
+
+            <form onSubmit={handleQuickWithdraw} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Nominal yang Diambil / Dipakai (Rp)
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full font-mono text-sm font-bold bg-slate-950 text-white border border-rose-500/50 rounded-xl px-3 py-2 focus:ring-1 focus:ring-rose-500 focus:outline-hidden"
+                />
+                <span className="text-[11px] text-rose-400 font-mono mt-1 block">
+                  -{formatIDR(parseNumberInput(withdrawAmount))}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Pos Pengeluaran
+                </label>
+                <select
+                  value={withdrawCategory}
+                  onChange={(e) => setWithdrawCategory(e.target.value as CategoryId)}
+                  className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                >
+                  <option value="keperluan">Keperluan / Kebutuhan Darurat</option>
+                  <option value="makan">Makan</option>
+                  <option value="transportasi">Transportasi</option>
+                  <option value="jajan">Jajan</option>
+                  <option value="game">Game / Hiburan</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Keterangan Pengeluaran
+                </label>
+                <input
+                  type="text"
+                  placeholder="Misal: Biaya darurat berobat / belanja mendesak"
+                  value={withdrawNote}
+                  onChange={(e) => setWithdrawNote(e.target.value)}
+                  className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setWithdrawGoalId(null)}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 hover:text-white rounded-lg"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
+                >
+                  Tarik & Kurangi Tabungan
                 </button>
               </div>
             </form>

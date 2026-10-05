@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Transaction, SavingsGoal, BudgetConfig, EmergencyFundConfig, CategoryBudgetMap } from '../types/finance';
+import { Transaction, SavingsGoal, BudgetConfig, EmergencyFundConfig, CategoryBudgetMap, CategoryId } from '../types/finance';
 import { INITIAL_TRANSACTIONS, INITIAL_SAVINGS_GOALS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories';
 
 const STORAGE_KEYS = {
@@ -114,11 +114,19 @@ export function useFinanceData() {
     };
     setTransactions((prev) => [newTx, ...prev]);
 
-    // If this transaction is a savings deposit linked to a goal, increment goal amount automatically
-    if (newTx.type === 'savings' && newTx.savingsGoalId) {
-      setGoals((prev) =>
-        prev.map((g) => (g.id === newTx.savingsGoalId ? { ...g, currentAmount: g.currentAmount + newTx.amount } : g))
-      );
+    // If this transaction is linked to a goal
+    if (newTx.savingsGoalId) {
+      if (newTx.type === 'savings') {
+        // Increment goal amount automatically
+        setGoals((prev) =>
+          prev.map((g) => (g.id === newTx.savingsGoalId ? { ...g, currentAmount: g.currentAmount + newTx.amount } : g))
+        );
+      } else if (newTx.type === 'expense') {
+        // Decrement goal amount automatically when expense is paid from this savings target
+        setGoals((prev) =>
+          prev.map((g) => (g.id === newTx.savingsGoalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - newTx.amount) } : g))
+        );
+      }
     }
     return newTx;
   }, []);
@@ -130,7 +138,23 @@ export function useFinanceData() {
   }, []);
 
   const deleteTransaction = useCallback((id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setTransactions((prev) => {
+      const txToDelete = prev.find((t) => t.id === id);
+      if (txToDelete && txToDelete.savingsGoalId) {
+        if (txToDelete.type === 'savings') {
+          // Revert deposit: reduce goal amount
+          setGoals((gPrev) =>
+            gPrev.map((g) => (g.id === txToDelete.savingsGoalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - txToDelete.amount) } : g))
+          );
+        } else if (txToDelete.type === 'expense') {
+          // Revert withdrawal: restore goal amount
+          setGoals((gPrev) =>
+            gPrev.map((g) => (g.id === txToDelete.savingsGoalId ? { ...g, currentAmount: g.currentAmount + txToDelete.amount } : g))
+          );
+        }
+      }
+      return prev.filter((t) => t.id !== id);
+    });
   }, []);
 
   // Update specific category budget limit (e.g. makan, transportasi, jajan, keperluan, game)
@@ -186,6 +210,31 @@ export function useFinanceData() {
     setGoals((prev) =>
       prev.map((g) => (g.id === goalId ? { ...g, currentAmount: g.currentAmount + amount } : g))
     );
+  }, [goals]);
+
+  // Withdraw / spend money from a specific savings goal
+  const withdrawFromGoal = useCallback((goalId: string, amount: number, note?: string, category: CategoryId = 'keperluan') => {
+    const goal = goals.find((g) => g.id === goalId);
+    if (!goal || amount <= 0) return;
+
+    // Create an expense transaction linked to this goal
+    const newTx: Transaction = {
+      id: 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+      type: 'expense',
+      amount,
+      category,
+      description: note || `Tarik dana dari target "${goal.title}"`,
+      date: new Date().toISOString().split('T')[0],
+      paymentMethod: 'bank_transfer',
+      savingsGoalId: goalId,
+      createdAt: Date.now(),
+    };
+
+    setTransactions((prev) => [newTx, ...prev]);
+    setGoals((prev) =>
+      prev.map((g) => (g.id === goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - amount) } : g))
+    );
+    return newTx;
   }, [goals]);
 
   // Aggregate Metrics & Category Breakdown
@@ -329,6 +378,7 @@ export function useFinanceData() {
     updateGoal,
     deleteGoal,
     contributeToGoal,
+    withdrawFromGoal,
     resetToSample,
     clearAll,
     exportData,

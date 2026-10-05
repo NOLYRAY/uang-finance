@@ -39,6 +39,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
+    setSelectedGoalId('');
     if (newType === 'expense') setCategory('makan');
     else if (newType === 'income') setCategory('gaji');
     else if (newType === 'savings') setCategory('tabungan_utama');
@@ -56,11 +57,12 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       description: description.trim() || availableCategories.find((c) => c.id === category)?.label || '',
       date,
       paymentMethod,
-      savingsGoalId: type === 'savings' && selectedGoalId ? selectedGoalId : undefined,
+      savingsGoalId: selectedGoalId ? selectedGoalId : undefined,
     });
 
     setAmountStr('');
     setDescription('');
+    setSelectedGoalId('');
     onClose();
   };
 
@@ -219,6 +221,39 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Optional: Deduct from Savings Goal if Expense */}
+          {type === 'expense' && goals.length > 0 && (
+            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300">
+                  Sumber Dana Pembayaran:
+                </label>
+                <span className="text-[10px] text-slate-500">Opsional</span>
+              </div>
+              <select
+                value={selectedGoalId}
+                onChange={(e) => setSelectedGoalId(e.target.value)}
+                className="w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+              >
+                <option value="">👛 Saldo Kas / Dompet Harian (Bukan dari Tabungan)</option>
+                {goals.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    🏦 Ambil & Potong dari: {g.title} (Saldo: {formatIDR(g.currentAmount)})
+                  </option>
+                ))}
+              </select>
+              {selectedGoalId ? (
+                <p className="text-[11px] text-amber-400 font-medium">
+                  ⚠️ Pengeluaran ini akan langsung mengurangi saldo target tabungan <strong>{goals.find((g) => g.id === selectedGoalId)?.title}</strong>.
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-500">
+                  Pilih target tabungan jika uang pengeluaran ini diambil dari tabungan Anda.
+                </p>
+              )}
             </div>
           )}
 

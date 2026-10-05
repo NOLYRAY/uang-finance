@@ -212,8 +212,19 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     </td>
 
                     {/* Deskripsi */}
-                    <td className="py-3.5 px-4 text-slate-300 max-w-xs truncate font-medium">
-                      {tx.description || '-'}
+                    <td className="py-3.5 px-4 text-slate-300 max-w-xs font-medium">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="truncate">{tx.description || '-'}</span>
+                        {tx.savingsGoalId && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 border ${
+                            isExpense 
+                              ? 'bg-amber-950/70 border-amber-800/50 text-amber-300' 
+                              : 'bg-blue-950/70 border-blue-800/50 text-blue-300'
+                          }`}>
+                            {isExpense ? '🏦 Dari Tabungan' : '🏦 Setoran Tabungan'}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Metode Bayar */}
