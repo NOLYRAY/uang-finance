@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { SavingsGoal, CategoryId } from '../types/finance';
+import { SavingsGoal, CategoryId, Transaction } from '../types/finance';
 import { formatIDR, formatDateIndo, parseNumberInput } from '../utils/formatters';
 import { calculateSavingsProjection, estimateMonthsToGoal, estimateDaysToGoal } from '../utils/calculations';
 import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles, ArrowDownRight, X } from 'lucide-react';
 
 interface SavingsGoalsPlannerProps {
   goals: SavingsGoal[];
+  transactions?: Transaction[];
   onAddGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt'>) => void;
   onDeleteGoal: (id: string) => void;
   onContribute: (goalId: string, amount: number, note?: string) => void;
@@ -14,6 +15,7 @@ interface SavingsGoalsPlannerProps {
 
 export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
   goals,
+  transactions = [],
   onAddGoal,
   onDeleteGoal,
   onContribute,
@@ -144,6 +146,9 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
           const deficit = Math.max(0, goal.targetAmount - goal.currentAmount);
           const dailyTarget = goal.dailyTarget || Math.round((goal.monthlyTarget || 0) / 30);
           const timeEst = estimateDaysToGoal(goal.targetAmount, goal.currentAmount, dailyTarget);
+          const totalSpentFromGoal = (transactions || [])
+            .filter((t) => t.type === 'expense' && t.savingsGoalId === goal.id)
+            .reduce((sum, t) => sum + t.amount, 0);
 
           return (
             <div
@@ -203,6 +208,13 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                         : `Kurang ${formatIDR(deficit)}`}
                     </span>
                   </div>
+
+                  {totalSpentFromGoal > 0 && (
+                    <div className="flex justify-between items-center text-[11px] text-rose-300 bg-rose-950/60 border border-rose-900/50 rounded-lg px-2.5 py-1">
+                      <span>Dipotong pengeluaran:</span>
+                      <span className="font-mono font-bold text-rose-400">-{formatIDR(totalSpentFromGoal)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Estimated Days to Goal */}

@@ -105,10 +105,34 @@ export function useFinanceData() {
     }
   }, [emergencyConfig]);
 
+  // One-time reconciliation: if user has a single savings goal, automatically link and deduct any unlinked expenses!
+  useEffect(() => {
+    if (goals.length === 1) {
+      const soleGoal = goals[0];
+      const unlinkedExpenses = transactions.filter((t) => t.type === 'expense' && !t.savingsGoalId);
+      if (unlinkedExpenses.length > 0) {
+        const totalUnlinked = unlinkedExpenses.reduce((sum, t) => sum + t.amount, 0);
+        setTransactions((prev) =>
+          prev.map((t) => (t.type === 'expense' && !t.savingsGoalId ? { ...t, savingsGoalId: soleGoal.id } : t))
+        );
+        setGoals((prev) =>
+          prev.map((g) => (g.id === soleGoal.id ? { ...g, currentAmount: Math.max(0, g.currentAmount - totalUnlinked) } : g))
+        );
+      }
+    }
+  }, []);
+
   // Transaction Actions
   const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+    // If not specified and there is exactly 1 savings goal, automatically deduct from that goal for expenses
+    let assignedGoalId = tx.savingsGoalId;
+    if (!assignedGoalId && tx.type === 'expense' && goals.length === 1) {
+      assignedGoalId = goals[0].id;
+    }
+
     const newTx: Transaction = {
       ...tx,
+      savingsGoalId: assignedGoalId,
       id: 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
       createdAt: Date.now(),
     };
@@ -129,7 +153,7 @@ export function useFinanceData() {
       }
     }
     return newTx;
-  }, []);
+  }, [goals]);
 
   const updateTransaction = useCallback((id: string, updated: Partial<Transaction>) => {
     setTransactions((prev) =>

@@ -569,6 +569,7 @@ export default function App() {
         {activeTab === 'savings' && (
           <SavingsGoalsPlanner
             goals={goals}
+            transactions={transactions}
             onAddGoal={addGoal}
             onDeleteGoal={deleteGoal}
             onContribute={contributeToGoal}

@@ -31,7 +31,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('qris');
-  const [selectedGoalId, setSelectedGoalId] = useState<string>('');
+  const [selectedGoalId, setSelectedGoalId] = useState<string>(() => (goals.length > 0 ? goals[0].id : ''));
 
   if (!isOpen) return null;
 
@@ -39,7 +39,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
-    setSelectedGoalId('');
+    setSelectedGoalId(goals.length > 0 ? goals[0].id : '');
     if (newType === 'expense') setCategory('makan');
     else if (newType === 'income') setCategory('gaji');
     else if (newType === 'savings') setCategory('tabungan_utama');
@@ -238,20 +238,20 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                 onChange={(e) => setSelectedGoalId(e.target.value)}
                 className="w-full text-xs bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
               >
-                <option value="">👛 Saldo Kas / Dompet Harian (Bukan dari Tabungan)</option>
                 {goals.map((g) => (
                   <option key={g.id} value={g.id}>
-                    🏦 Ambil & Potong dari: {g.title} (Saldo: {formatIDR(g.currentAmount)})
+                    🏦 Potong dari Tabungan: {g.title} (Sisa Saldo: {formatIDR(g.currentAmount)})
                   </option>
                 ))}
+                <option value="">👛 Saldo Kas / Dompet Luar (Jangan potong tabungan)</option>
               </select>
               {selectedGoalId ? (
                 <p className="text-[11px] text-amber-400 font-medium">
-                  ⚠️ Pengeluaran ini akan langsung mengurangi saldo target tabungan <strong>{goals.find((g) => g.id === selectedGoalId)?.title}</strong>.
+                  ✓ Saldo tabungan <strong>{goals.find((g) => g.id === selectedGoalId)?.title}</strong> akan otomatis terpotong sebesar nominal pengeluaran.
                 </p>
               ) : (
                 <p className="text-[10px] text-slate-500">
-                  Pilih target tabungan jika uang pengeluaran ini diambil dari tabungan Anda.
+                  Uang pengeluaran ini tidak akan memotong saldo tabungan.
                 </p>
               )}
             </div>
