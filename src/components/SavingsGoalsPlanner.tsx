@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { SavingsGoal, CategoryId, Transaction } from '../types/finance';
 import { formatIDR, formatDateIndo, parseNumberInput } from '../utils/formatters';
 import { calculateSavingsProjection, estimateMonthsToGoal, estimateDaysToGoal } from '../utils/calculations';
-import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles, ArrowDownRight, X } from 'lucide-react';
+import { Target, TrendingUp, Calendar, Plus, Trash2, Coins, PiggyBank, Sparkles, ArrowDownRight, X, Clock } from 'lucide-react';
 
 interface SavingsGoalsPlannerProps {
   goals: SavingsGoal[];
   transactions?: Transaction[];
   onAddGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt'>) => void;
   onDeleteGoal: (id: string) => void;
-  onContribute: (goalId: string, amount: number, note?: string) => void;
-  onWithdraw?: (goalId: string, amount: number, note?: string, category?: CategoryId) => void;
+  onContribute: (goalId: string, amount: number, note?: string, date?: string) => void;
+  onWithdraw?: (goalId: string, amount: number, note?: string, category?: CategoryId, date?: string) => void;
+  onDeleteTransaction?: (id: string) => void;
 }
 
 export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
@@ -20,6 +21,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
   onDeleteGoal,
   onContribute,
   onWithdraw,
+  onDeleteTransaction,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -32,11 +34,16 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
   const [contributeAmount, setContributeAmount] = useState('0');
+  const [contributeDate, setContributeDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [contributeNote, setContributeNote] = useState('');
 
   const [withdrawGoalId, setWithdrawGoalId] = useState<string | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState('0');
+  const [withdrawDate, setWithdrawDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [withdrawNote, setWithdrawNote] = useState('');
   const [withdrawCategory, setWithdrawCategory] = useState<CategoryId>('keperluan');
+
+  const [historyGoalId, setHistoryGoalId] = useState<string | null>(null);
 
   const [simInitial, setSimInitial] = useState('0');
   const [simMonthly, setSimMonthly] = useState('0');
@@ -77,8 +84,14 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
     const amount = parseNumberInput(contributeAmount);
     if (amount <= 0) return;
 
-    onContribute(contributeGoalId, amount, `Setoran tabungan via planner`);
+    onContribute(
+      contributeGoalId,
+      amount,
+      contributeNote.trim() || `Setoran tabungan via planner`,
+      contributeDate
+    );
     setContributeGoalId(null);
+    setContributeNote('');
   };
 
   const handleQuickWithdraw = (e: React.FormEvent) => {
@@ -88,9 +101,16 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
     if (amount <= 0) return;
 
     if (onWithdraw) {
-      onWithdraw(withdrawGoalId, amount, withdrawNote.trim() || undefined, withdrawCategory);
+      onWithdraw(
+        withdrawGoalId,
+        amount,
+        withdrawNote.trim() || undefined,
+        withdrawCategory,
+        withdrawDate
+      );
     }
     setWithdrawGoalId(null);
+    setWithdrawNote('');
   };
 
   return (
@@ -236,7 +256,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                 </div>
               </div>
 
-              {/* Action Buttons */}
+                {/* Action Buttons */}
               <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
                 <span className="text-[11px] text-slate-400 font-medium">
                   {progress >= 100 ? 'Lengkap' : 'Aktif'}
@@ -269,6 +289,20 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Riwayat Tabungan Button */}
+              <button
+                onClick={() => setHistoryGoalId(goal.id)}
+                className="w-full mt-2.5 py-1.5 px-3 text-xs font-semibold text-slate-300 hover:text-white bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl transition-all flex items-center justify-between cursor-pointer group"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-400 group-hover:rotate-12 transition-transform" />
+                  <span>Riwayat & Tanggal Setoran</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/50">
+                  {(transactions || []).filter((t) => t.savingsGoalId === goal.id).length} Catatan →
+                </span>
+              </button>
             </div>
           );
         })}
@@ -394,15 +428,44 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                 </label>
                 <input
                   type="text"
+                  required
+                  autoFocus
                   value={contributeAmount}
                   onChange={(e) => setContributeAmount(e.target.value)}
-                  className="w-full font-mono text-sm font-bold bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                  className="w-full font-mono text-sm font-bold bg-slate-950 text-white border border-emerald-500/40 rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
                 />
                 <span className="text-[11px] text-emerald-400 font-mono mt-1 block">
-                  {formatIDR(parseNumberInput(contributeAmount))}
+                  +{formatIDR(parseNumberInput(contributeAmount))}
                 </span>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Tanggal Setoran
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={contributeDate}
+                  onChange={(e) => setContributeDate(e.target.value)}
+                  className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Keterangan / Catatan Setoran (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Misal: Sisa uang jajan, gaji, transfer"
+                  value={contributeNote}
+                  onChange={(e) => setContributeNote(e.target.value)}
+                  className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setContributeGoalId(null)}
@@ -412,7 +475,7 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-xs"
+                  className="px-4 py-1.5 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-xs cursor-pointer"
                 >
                   Konfirmasi Setor
                 </button>
@@ -471,6 +534,19 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Tanggal Penarikan
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={withdrawDate}
+                  onChange={(e) => setWithdrawDate(e.target.value)}
+                  className="w-full text-xs bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 focus:ring-1 focus:ring-rose-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Pos Pengeluaran
                 </label>
                 <select
@@ -519,6 +595,140 @@ export const SavingsGoalsPlanner: React.FC<SavingsGoalsPlannerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal History / Mutasi Tabungan Lengkap dengan Tanggal & Hapus */}
+      {historyGoalId && (() => {
+        const goal = goals.find((g) => g.id === historyGoalId);
+        if (!goal) return null;
+
+        const goalTxs = (transactions || [])
+          .filter((t) => t.savingsGoalId === goal.id)
+          .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+
+        const totalIn = goalTxs.filter((t) => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
+        const totalOut = goalTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-3 sm:p-4">
+            <div className="bg-slate-900 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-800 animate-in zoom-in-95">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-md bg-blue-950 text-blue-400 border border-blue-800/40">
+                      <Clock className="w-4 h-4" />
+                    </span>
+                    <h3 className="text-base font-bold text-white">
+                      Riwayat Tabungan: {goal.title}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Catatan tanggal setoran masuk & pengeluaran yang memotong tabungan
+                  </p>
+                </div>
+                <button
+                  onClick={() => setHistoryGoalId(null)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Summary Banner */}
+              <div className="p-3 sm:p-4 bg-slate-950/60 border-b border-slate-800/80 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Saldo Terkumpul</span>
+                  <span className="font-mono font-bold text-white text-xs sm:text-sm">{formatIDR(goal.currentAmount)}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-800/40">
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block">Total Masuk</span>
+                  <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">+{formatIDR(totalIn)}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-rose-950/40 border border-rose-800/40">
+                  <span className="text-[10px] text-rose-400 uppercase tracking-wider block">Total Terpakai</span>
+                  <span className="font-mono font-bold text-rose-400 text-xs sm:text-sm">-{formatIDR(totalOut)}</span>
+                </div>
+              </div>
+
+              {/* Transactions List */}
+              <div className="p-4 overflow-y-auto space-y-2.5 flex-1 divide-y divide-slate-800/40">
+                {goalTxs.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs space-y-2">
+                    <p>Belum ada catatan mutasi transaksi pada tabungan ini.</p>
+                    <p className="text-[11px] text-slate-500">
+                      Saldo awal saat target dibuat: <strong className="text-white">{formatIDR(goal.currentAmount)}</strong> (Tanggal: {formatDateIndo(new Date(goal.createdAt).toISOString().split('T')[0])})
+                    </p>
+                  </div>
+                ) : (
+                  goalTxs.map((tx) => {
+                    const isDeposit = tx.type === 'savings';
+                    return (
+                      <div
+                        key={tx.id}
+                        className="pt-2.5 first:pt-0 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                isDeposit
+                                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50'
+                                  : 'bg-rose-950 text-rose-400 border border-rose-800/50'
+                              }`}
+                            >
+                              {isDeposit ? '🟢 Setoran Masuk' : '🔴 Pengeluaran'}
+                            </span>
+                            <span className="text-xs font-mono text-slate-300 font-bold">
+                              📅 {formatDateIndo(tx.date)}
+                            </span>
+                          </div>
+                          <div className="text-xs font-medium text-white mt-1 truncate">
+                            {tx.description || (isDeposit ? 'Setoran Tabungan' : 'Pengeluaran')}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`font-mono font-bold text-xs sm:text-sm ${
+                              isDeposit ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            {isDeposit ? '+' : '-'}{formatIDR(tx.amount)}
+                          </span>
+
+                          {onDeleteTransaction && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Hapus catatan transaksi ini (${formatIDR(tx.amount)})? Saldo tabungan akan otomatis disesuaikan.`)) {
+                                  onDeleteTransaction(tx.id);
+                                }
+                              }}
+                              title="Hapus transaksi ini"
+                              className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-3 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={() => setHistoryGoalId(null)}
+                  className="px-4 py-1.5 text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer"
+                >
+                  Tutup Riwayat
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal Add Goal */}
       {showAddModal && (

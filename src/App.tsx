@@ -574,6 +574,7 @@ export default function App() {
             onDeleteGoal={deleteGoal}
             onContribute={contributeToGoal}
             onWithdraw={withdrawFromGoal}
+            onDeleteTransaction={deleteTransaction}
           />
         )}
 

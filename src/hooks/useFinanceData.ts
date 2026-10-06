@@ -164,22 +164,25 @@ export function useFinanceData() {
   const deleteTransaction = useCallback((id: string) => {
     setTransactions((prev) => {
       const txToDelete = prev.find((t) => t.id === id);
-      if (txToDelete && txToDelete.savingsGoalId) {
-        if (txToDelete.type === 'savings') {
-          // Revert deposit: reduce goal amount
-          setGoals((gPrev) =>
-            gPrev.map((g) => (g.id === txToDelete.savingsGoalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - txToDelete.amount) } : g))
-          );
-        } else if (txToDelete.type === 'expense') {
-          // Revert withdrawal: restore goal amount
-          setGoals((gPrev) =>
-            gPrev.map((g) => (g.id === txToDelete.savingsGoalId ? { ...g, currentAmount: g.currentAmount + txToDelete.amount } : g))
-          );
+      if (txToDelete) {
+        const goalId = txToDelete.savingsGoalId || (goals.length === 1 && txToDelete.type === 'expense' ? goals[0].id : null);
+        if (goalId) {
+          if (txToDelete.type === 'savings') {
+            // Revert deposit: reduce goal amount
+            setGoals((gPrev) =>
+              gPrev.map((g) => (g.id === goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - txToDelete.amount) } : g))
+            );
+          } else if (txToDelete.type === 'expense') {
+            // Revert withdrawal: restore goal amount
+            setGoals((gPrev) =>
+              gPrev.map((g) => (g.id === goalId ? { ...g, currentAmount: g.currentAmount + txToDelete.amount } : g))
+            );
+          }
         }
       }
       return prev.filter((t) => t.id !== id);
     });
-  }, []);
+  }, [goals]);
 
   // Update specific category budget limit (e.g. makan, transportasi, jajan, keperluan, game)
   const updateCategoryBudget = useCallback((key: keyof CategoryBudgetMap, amount: number) => {
@@ -213,7 +216,7 @@ export function useFinanceData() {
     setGoals((prev) => prev.filter((g) => g.id !== id));
   }, []);
 
-  const contributeToGoal = useCallback((goalId: string, amount: number, note?: string) => {
+  const contributeToGoal = useCallback((goalId: string, amount: number, note?: string, date?: string) => {
     const goal = goals.find((g) => g.id === goalId);
     if (!goal || amount <= 0) return;
 
@@ -224,7 +227,7 @@ export function useFinanceData() {
       amount,
       category: goal.category === 'emergency' ? 'dana_darurat' : 'tabungan_utama',
       description: note || `Setoran untuk target "${goal.title}"`,
-      date: new Date().toISOString().split('T')[0],
+      date: date || new Date().toISOString().split('T')[0],
       paymentMethod: 'bank_transfer',
       savingsGoalId: goalId,
       createdAt: Date.now(),
@@ -237,7 +240,7 @@ export function useFinanceData() {
   }, [goals]);
 
   // Withdraw / spend money from a specific savings goal
-  const withdrawFromGoal = useCallback((goalId: string, amount: number, note?: string, category: CategoryId = 'keperluan') => {
+  const withdrawFromGoal = useCallback((goalId: string, amount: number, note?: string, category: CategoryId = 'keperluan', date?: string) => {
     const goal = goals.find((g) => g.id === goalId);
     if (!goal || amount <= 0) return;
 
@@ -248,7 +251,7 @@ export function useFinanceData() {
       amount,
       category,
       description: note || `Tarik dana dari target "${goal.title}"`,
-      date: new Date().toISOString().split('T')[0],
+      date: date || new Date().toISOString().split('T')[0],
       paymentMethod: 'bank_transfer',
       savingsGoalId: goalId,
       createdAt: Date.now(),

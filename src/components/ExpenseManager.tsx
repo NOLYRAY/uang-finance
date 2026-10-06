@@ -51,6 +51,9 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredCat, setHoveredCat] = useState<string | null>(null);
 
+  // Quick category deletion modal
+  const [categoryToDeleteTxs, setCategoryToDeleteTxs] = useState<CategoryId | null>(null);
+
   // Modal / Inline state for editing a category budget
   const [editingBudgetCat, setEditingBudgetCat] = useState<keyof CategoryBudgetMap | null>(null);
   const [editBudgetValue, setEditBudgetValue] = useState<string>('');
@@ -424,6 +427,19 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({
                     </span>
                   )}
                 </div>
+
+                {item.txCount > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoryToDeleteTxs(item.key as CategoryId);
+                    }}
+                    className="mt-2.5 w-full py-1.5 px-2 rounded-xl bg-rose-950/40 hover:bg-rose-950/80 border border-rose-900/40 hover:border-rose-700 text-[11px] font-semibold text-rose-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer group"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+                    <span>Lihat & Hapus ({item.txCount})</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -849,8 +865,62 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({
           </div>
         </div>
 
-        {/* Ledger Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile View: Card List with easy-to-tap Hapus buttons */}
+        <div className="block sm:hidden divide-y divide-slate-800/80 p-3">
+          {expenseTransactions.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 text-xs">
+              Tidak ada transaksi pengeluaran yang sesuai dengan filter.
+            </div>
+          ) : (
+            expenseTransactions.map((tx) => {
+              const cat = CATEGORIES[tx.category] || {
+                label: tx.category,
+                shortLabel: tx.category,
+                color: '#94a3b8',
+              };
+
+              return (
+                <div key={tx.id} className="py-3 first:pt-0 last:pb-0 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      <span className="text-xs font-bold text-white truncate">{cat.label}</span>
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                        📅 {formatDateIndo(tx.date)}
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold font-mono text-rose-400 shrink-0">
+                      -{formatIDR(tx.amount)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-300 font-medium truncate flex-1">
+                      {tx.description || '-'}
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Hapus pengeluaran "${tx.description || cat.label}" (${formatIDR(tx.amount)})?`)) {
+                          onDeleteTransaction(tx.id);
+                        }
+                      }}
+                      className="px-2.5 py-1 text-xs font-bold text-rose-300 bg-rose-950 hover:bg-rose-900 border border-rose-800/60 rounded-lg flex items-center gap-1 transition-all shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Ledger Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
@@ -904,11 +974,16 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <button
-                          onClick={() => onDeleteTransaction(tx.id)}
+                          onClick={() => {
+                            if (window.confirm(`Hapus pengeluaran "${tx.description || cat.label}" (${formatIDR(tx.amount)})?`)) {
+                              onDeleteTransaction(tx.id);
+                            }
+                          }}
                           title="Hapus transaksi"
-                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 rounded-md transition-colors"
+                          className="px-2.5 py-1 text-xs font-semibold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900 border border-rose-800/50 rounded-lg transition-colors flex items-center gap-1 mx-auto cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Hapus</span>
                         </button>
                       </td>
                     </tr>
@@ -919,6 +994,103 @@ export const ExpenseManager: React.FC<ExpenseManagerProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Modal View & Delete Transactions for a Specific Category */}
+      {categoryToDeleteTxs && (() => {
+        const catInfo = CATEGORIES[categoryToDeleteTxs];
+        const txsInCat = transactions.filter((t) => t.type === 'expense' && t.category === categoryToDeleteTxs);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-3 sm:p-4">
+            <div className="bg-slate-900 rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-800 animate-in zoom-in-95">
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: catInfo?.color }} />
+                    <span>Daftar Pengeluaran: {catInfo?.label}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {txsInCat.length} transaksi tercatat (Total: {formatIDR(txsInCat.reduce((s, t) => s + t.amount, 0))})
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCategoryToDeleteTxs(null)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-4 overflow-y-auto space-y-2.5 flex-1 divide-y divide-slate-800/50">
+                {txsInCat.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs">
+                    Semua transaksi di pos ini sudah terhapus.
+                  </div>
+                ) : (
+                  txsInCat.map((tx) => (
+                    <div key={tx.id} className="pt-2.5 first:pt-0 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                          <span>📅 {formatDateIndo(tx.date)}</span>
+                          {tx.savingsGoalId && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-800/40">
+                              🏦 Potong Tabungan
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs font-medium text-white truncate mt-0.5">
+                          {tx.description || catInfo?.label}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="font-mono font-bold text-rose-400 text-xs sm:text-sm">
+                          -{formatIDR(tx.amount)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Hapus transaksi "${tx.description || catInfo?.label}" (${formatIDR(tx.amount)})?`)) {
+                              onDeleteTransaction(tx.id);
+                            }
+                          }}
+                          className="px-2.5 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
+                          title="Hapus transaksi ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-3 border-t border-slate-800 flex items-center justify-between">
+                {txsInCat.length > 1 ? (
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Hapus SEMUA ${txsInCat.length} transaksi di kategori ${catInfo?.label}?`)) {
+                        txsInCat.forEach((t) => onDeleteTransaction(t.id));
+                        setCategoryToDeleteTxs(null);
+                      }
+                    }}
+                    className="text-xs font-semibold text-rose-400 hover:text-rose-300 cursor-pointer"
+                  >
+                    Hapus Semua ({txsInCat.length})
+                  </button>
+                ) : <span />}
+
+                <button
+                  onClick={() => setCategoryToDeleteTxs(null)}
+                  className="px-4 py-1.5 text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer"
+                >
+                  Selesai
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal / Dialog to Edit Category Budget */}
       {editingBudgetCat && (
