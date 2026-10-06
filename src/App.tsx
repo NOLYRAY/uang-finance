@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   CreditCard,
   PlusCircle,
+  Trash2,
 } from 'lucide-react';
 import { formatIDR, formatDateIndo } from './utils/formatters';
 
@@ -513,7 +514,7 @@ export default function App() {
                       key={tx.id}
                       className="p-3.5 sm:px-5 flex items-center justify-between hover:bg-slate-800/30 transition-colors text-xs"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: cat.color }}
@@ -528,21 +529,36 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0 ml-3">
-                        <div
-                          className={`font-mono font-bold text-sm tabular-nums ${
-                            isExpense
-                              ? 'text-rose-400'
-                              : isIncome
-                              ? 'text-emerald-400'
-                              : 'text-blue-400'
-                          }`}
-                        >
-                          {isExpense ? '-' : '+'}{formatIDR(tx.amount)}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <div
+                            className={`font-mono font-bold text-sm tabular-nums ${
+                              isExpense
+                                ? 'text-rose-400'
+                                : isIncome
+                                ? 'text-emerald-400'
+                                : 'text-blue-400'
+                            }`}
+                          >
+                            {isExpense ? '-' : '+'}{formatIDR(tx.amount)}
+                          </div>
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
+                            {tx.type}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
-                          {tx.type}
-                        </span>
+
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Hapus transaksi "${tx.description || cat.label}" (${formatIDR(tx.amount)})?`)) {
+                              deleteTransaction(tx.id);
+                              showToast(`Transaksi ${formatIDR(tx.amount)} berhasil dihapus`);
+                            }
+                          }}
+                          title="Hapus transaksi"
+                          className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 rounded-xl transition-colors cursor-pointer active:scale-95 ml-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   );
